@@ -1,0 +1,84 @@
+- name: Update apt and install Nginx
+  hosts: web
+  become: true
+  tasks:
+    - name: update apt
+      apt:
+        update_cache: yes
+
+    - name: Upgrade apt
+      apt:
+        upgrade: dist
+
+    - name: Install Nginx web server
+      apt:
+        name: nginx
+        state: present
+
+    - name: Ensure Nginx is running and enabled
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+
+- name: Update apt and install Postgres
+  hosts: db
+  become: true
+  pre_tasks:
+    - name: "Install packages"
+      dnf: "name={{ item }} state=present"
+      with_items:
+        - postgresql
+        - postgresql-server
+        
+    - name: "Install Python packages"
+      pip: "name={{ item }}  state=present"
+      with_items:
+        - psycopg2-binary
+  tasks:
+    - name: "Find out if PostgreSQL is initialized"
+      ansible.builtin.stat:
+        path: "/var/lib/pgsql/data/pg_hba.conf"
+      register: postgres_data
+
+    - name: "Initialize PostgreSQL"
+      shell: "postgresql-setup initdb"
+      when: not postgres_data.stat.exists
+ 
+    - name: "Start and enable services"
+      service: "name={{ item }} state=started enabled=yes"
+      with_items:
+        - postgresql
+  handlers:
+    - name: restart postgres
+      service: name=postgresql state=restarted
+
+
+- name: Create user
+  hosts: all
+  become: true
+  tasks:
+  - name: Add user acmeuser
+    user:
+      name: acmeuser
+      shell: /bin/bash
+      home: /home/baeldung
+  - name: Create a password for user acmeuser
+    user:
+      name: acmeuser
+      password: 'aulapuc1234'
+
+
+- name: Create file
+  hosts: all
+  become: true
+  tasks:
+  - name: Add user acmeuser
+    user:
+      name: acmeuser
+      shell: /bin/bash
+      home: /home/baeldung
+  - name: Create a password for user acmeuser
+    user:
+      name: acmeuser
+      password: 'aulapuc1234'
